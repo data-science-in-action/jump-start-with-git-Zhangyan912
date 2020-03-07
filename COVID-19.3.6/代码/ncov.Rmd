@@ -1,0 +1,85 @@
+---
+title: "新型肺炎非湖北省数据Code"
+output: html_document
+---
+
+```{r}
+#首先设置一个工作路径，并把ncov.csv文件放在当前路径下
+setwd("") #设置工作路径
+ncov = read.csv(file = 'ncov.csv')  #读取文件
+```
+
+## 1、非湖北新型肺炎确诊病例数时序图（累计）
+```{r}
+par(family = 'STKaiti')  #针对mac无法显示中文的设置，windows无需此行
+
+ncov$Date = format(ncov$Date,digits = 3)#将Date转为字符串，作为画图的横轴标签
+len = length(ncov$Date)
+ncov$numdate = seq(1.20,length.out = len,by = 0.01) #添加numdate变量，作为画图的横轴
+ncov$Not_Hubei_confirmed_count = ncov$confirmed_count-ncov$Hubei_confirmed_count #添加非湖北地区的累计确诊数
+
+#作图，xaxt = 'n'代表不标出横坐标，我们在后面的axis()中用lab重新标注横坐标轴
+plot(ncov$numdate,ncov$Not_Hubei_confirmed_count, xaxt = "n",type = 'b',xlab = '时间',main = '非湖北地区新型肺炎确诊病例数时序图',ylab = '累计人数',col = 'red',cex.main = 1.5,cex.lab = 1.2)
+axis(1,ncov$numdate,las = 1,cex.axis = 1,labels = ncov$Date)
+
+
+
+```
+
+## 2、非湖北地区新型肺炎确诊病例数时序图（新增）
+```{r}
+par(family = 'STKaiti')  #针对mac无法显示中文的设置，windows无需此行
+
+ncov2 = ncov
+ncov2$numdate[1] = NA  #新增确诊从21日开始作图
+ncov2$Not_Hubei_new_confirmed = ncov2$new_confirmed-ncov2$Hubei_new_confirmed #添加非湖北地区的新增确诊数
+
+plot(ncov2$numdate,ncov2$new_confirmed,xaxt = "n",type = 'b',xlab = '时间',main = '非湖北地区新型肺炎确诊病例数时序图',ylab = '新增人数',col = 'red',cex.main = 1.5,cex.lab = 1.2)
+axis(1,ncov2$numdate,las = 1,cex.axis = 1, labels = ncov2$Date)
+```
+
+## 3、各个指标每日环比时序图（增长率）
+```{r}
+par(family = 'STKaiti')  #针对mac无法显示中文的设置，windows无需此行
+
+# 首先定义一个计算增长率的函数
+grouth_rate = function(Vec){
+  len = length(Vec)
+  rate = 100*(Vec[2:len] - Vec[1:(len-1)]) / Vec[1:(len-1)]
+  rate = c(NA,rate)  #注意增长率向量比原来的向量长度少一位，在前面增加NA
+  return(rate)
+}
+
+
+ncov_rate = ncov2
+ncov_rate$Not_Hubei_dead_count = ncov_rate$dead_count-ncov_rate$Hubei_dead_count
+ncov_rate$Not_Hubei_cure_count = ncov_rate$cure_count-ncov_rate$Hubei_cure_count
+ncov_rate$Not_Hubei_observe_count = ncov_rate$observe_count-ncov_rate$Hubei_observe_count
+
+#要注意的是，确诊人数增长率直接按照表格数据中的新增和累计计算，因此不采用累计做差的函数
+len3 = length(ncov_rate$Date)
+ncov_rate$confirmed_rate = c(NA,100 * ncov_rate$Not_Hubei_new_confirmed[2:len3] / ncov_rate$Not_Hubei_confirmed_count[1:(len3-1)])
+
+#其他3个增长率直接采用函数计算
+ncov_rate$dead_rate = grouth_rate(ncov_rate$Not_Hubei_dead_count)
+ncov_rate$cure_rate = grouth_rate(ncov_rate$Not_Hubei_cure_count)
+ncov_rate$observe_rate = grouth_rate(ncov_rate$Not_Hubei_observe_count)
+
+ncov_rate = ncov_rate[-c(1:4),] #我们从24日开始作图，把前四行去掉
+
+plot(ncov_rate$numdate,ncov_rate$confirmed_rate, xaxt = "n",type = 'b', 
+     xlab = '时间',ylab = '增长率(%)',col = 'red',cex = 0.8,
+     main = '非湖北地区各个指标每日环比时序图',cex.main = 1.5,cex.lab = 1.2,ylim = c(-10,110))
+axis(1,ncov_rate$numdate,las = 1,cex.axis = 1.2,labels = ncov_rate$Date)
+lines(ncov_rate$numdate,ncov_rate$dead_rate,type = 'b',col = 'chartreuse4',cex = 0.8, pch = 3 ,lty = 2)
+lines(ncov_rate$numdate,ncov_rate$cure_rate,type = 'b',col = 'blue',cex = 0.8, pch = 5 ,lty = 3)
+lines(ncov_rate$numdate,ncov_rate$observe_rate,type = 'b',col = 'darkorange',cex = 0.7 , pch = 7 , lty = 4)
+
+#在y = 0处做一条分界线
+xx = c(1,3)
+cc = c(0,0)
+lines(xx,cc,type = 'l',lty = 2)
+
+legend('topright',legend=c("确诊病例",'死亡人数','治愈人数','正在接受医学观察人数'),col = c("red",'chartreuse4','blue','darkorange'),pch = c(1,3,5,7),lty = c(1,2,3,4),lwd = 1,cex = 0.85) 
+
+```
