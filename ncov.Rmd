@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ```{r}
-ncov = read.csv(file = 'COVID-19/data/ncov.csv')  #读取文件
+ncov = read.csv(file = 'data/ncov.csv')  #读取文件
 ```
 
 ## 1、非湖北新型肺炎确诊病例数时序图（累计）
